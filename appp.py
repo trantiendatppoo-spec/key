@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, make_response
 import sqlite3, uuid, hashlib, os, threading, time, random, string
 from datetime import datetime, timedelta
 
@@ -25,7 +25,14 @@ def init_db():
                 expires   TEXT NOT NULL
             )
         """)
-        # Bảng token 1 lần — mỗi lần script mở Link4Sub tạo 1 token
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id  TEXT PRIMARY KEY,
+                ip_hash     TEXT NOT NULL,
+                created     TEXT NOT NULL,
+                used        INTEGER DEFAULT 0
+            )
+        """)
         db.execute("""
             CREATE TABLE IF NOT EXISTS tokens (
                 token     TEXT PRIMARY KEY,
@@ -102,11 +109,47 @@ def gentoken():
     return jsonify({"token": token, "url": getkey_url})
 
 # Trang get key — chỉ vào được nếu có token hợp lệ chưa dùng
-@app.route("/getkey")
-def getkey_page():
+# Trang trung gian — Link4Sub redirect về đây
+# Tạo session cookie rồi redirect về /getkey
+@app.route("/checkpoint")
+def checkpoint():
     ip = get_real_ip()
     ip_hash = hash_ip(ip)
     now = datetime.utcnow()
+    session_id = str(uuid.uuid4()).replace("-", "")
+
+    with get_db() as db:
+        db.execute(
+            "INSERT INTO sessions (session_id, ip_hash, created) VALUES (?,?,?)",
+            (session_id, ip_hash, now.isoformat())
+        )
+        db.commit()
+
+    resp = make_response(render_template_string(REDIRECT_PAGE))
+    resp.set_cookie("bnhub_session", session_id, max_age=300, httponly=True)  # 5 phút
+    return resp
+
+@app.route("/getkey")
+def getkey_page():
+    # Check cookie session
+    session_id = request.cookies.get("bnhub_session", "")
+    ip = get_real_ip()
+    ip_hash = hash_ip(ip)
+    now = datetime.utcnow()
+
+    if session_id:
+        with get_db() as db:
+            sess = db.execute(
+                "SELECT * FROM sessions WHERE session_id=? AND ip_hash=?",
+                (session_id, ip_hash)
+            ).fetchone()
+            if not sess:
+                return render_template_string(ERROR_PAGE, msg="Truy cập không hợp lệ!<br>Vui lòng lấy key từ script.")
+            created = datetime.fromisoformat(sess["created"])
+            if datetime.utcnow() - created > timedelta(minutes=5):
+                return render_template_string(ERROR_PAGE, msg="Phiên đã hết hạn!<br>Vui lòng lấy key lại từ script.")
+    else:
+        return render_template_string(ERROR_PAGE, msg="Truy cập không hợp lệ!<br>Vui lòng lấy key từ script.")
 
     with get_db() as db:
         db.execute("DELETE FROM keys WHERE ip_hash=? AND expires < ?", (ip_hash, now.isoformat()))
@@ -217,6 +260,14 @@ def admin_stats():
     return jsonify({"total": total, "active": active, "expired": expired})
 
 # ─── HTML ─────────────────────────────────────────────────────────────────────
+
+REDIRECT_PAGE = """
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="0;url=/getkey">
+<title>Đang chuyển hướng...</title>
+</head><body></body></html>
+"""
 
 ERROR_PAGE = """
 <!DOCTYPE html><html lang="vi"><head>
