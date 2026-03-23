@@ -56,6 +56,21 @@ def auto_cleanup():
 
 threading.Thread(target=auto_cleanup, daemon=True).start()
 
+def keep_alive():
+    while True:
+        time.sleep(600)  # 10 phút ping 1 lần
+        try:
+            import urllib.request
+            urllib.request.urlopen("https://bnhub.onrender.com/ping")
+        except:
+            pass
+
+threading.Thread(target=keep_alive, daemon=True).start()
+
+@app.route("/ping")
+def ping():
+    return "pong", 200
+
 # ─── HELPER ──────────────────────────────────────────────────────────────────
 
 def hash_ip(ip):
