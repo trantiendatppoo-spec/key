@@ -83,7 +83,7 @@ def gentoken():
     with get_db() as db:
         db.execute("INSERT INTO tokens (token, created) VALUES (?,?)", (token, now))
         db.commit()
-    getkey_url = f"http://{request.host}/getkey?t={token}"
+    getkey_url = f"https://{request.host}/getkey?t={token}"
     return jsonify({"token": token, "url": getkey_url})
 
 # Trang get key — chỉ vào được nếu có token hợp lệ chưa dùng
