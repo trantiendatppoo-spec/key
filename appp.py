@@ -104,25 +104,6 @@ def gentoken():
 # Trang get key — chỉ vào được nếu có token hợp lệ chưa dùng
 @app.route("/getkey")
 def getkey_page():
-    t = request.args.get("t", "").strip()
-
-    # Kiểm tra token
-    with get_db() as db:
-        tok = db.execute("SELECT * FROM tokens WHERE token=? AND used=0", (t,)).fetchone()
-        if not tok:
-            return render_template_string(ERROR_PAGE, msg="Link không hợp lệ hoặc đã được sử dụng!<br>Vui lòng lấy link mới từ script.")
-
-        # Token hợp lệ — check xem token còn trong 30 phút không
-        created = datetime.fromisoformat(tok["created"])
-        if datetime.utcnow() - created > timedelta(minutes=30):
-            db.execute("DELETE FROM tokens WHERE token=?", (t,))
-            db.commit()
-            return render_template_string(ERROR_PAGE, msg="Link đã hết hạn (30 phút)!<br>Vui lòng lấy link mới từ script.")
-
-        # Đánh dấu token đã dùng ngay
-        db.execute("UPDATE tokens SET used=1 WHERE token=?", (t,))
-        db.commit()
-
     ip = get_real_ip()
     ip_hash = hash_ip(ip)
     now = datetime.utcnow()
