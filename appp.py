@@ -350,7 +350,7 @@ HTML_PAGE = """
     --green: #00f5d4;
   }
   body {
-    background: var(--bg);
+    background: var(--bg) url("/static/staticbg.jpg") center bottom / cover no-repeat fixed;
     color: var(--text);
     font-family: 'Rajdhani', sans-serif;
     min-height: 100vh;
@@ -358,6 +358,13 @@ HTML_PAGE = """
     align-items: center;
     justify-content: center;
     overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: rgba(0,2,15,0.60);
+    pointer-events: none;
+    z-index: 0;
   }
 
   /* Scanlines */
@@ -376,15 +383,6 @@ HTML_PAGE = """
   }
 
   /* Grid nền */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(0,180,216,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,180,216,0.04) 1px, transparent 1px);
-    background-size: 50px 50px;
-    pointer-events: none;
-  }
 
   /* Orbs */
   .orb {
@@ -587,6 +585,7 @@ HTML_PAGE = """
 <div class="orb orb2"></div>
 <div class="card">
   <div class="header">
+    <img src="/static/logo.png" style="width:38px;height:38px;border-radius:8px;object-fit:cover;box-shadow:0 0 12px rgba(0,180,216,0.4);" alt="N">
     <div class="logo">BN HUB</div>
     <div class="badge">KEY SYSTEM</div>
   </div>
