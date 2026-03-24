@@ -350,7 +350,7 @@ HTML_PAGE = """
     --green: #00f5d4;
   }
   body {
-    background: var(--bg) url("/static/staticbg.jpg") center bottom / cover no-repeat fixed;
+    background: var(--bg) url("/staticbg.jpg") center bottom / cover no-repeat fixed;
     color: var(--text);
     font-family: 'Rajdhani', sans-serif;
     min-height: 100vh;
@@ -585,7 +585,7 @@ HTML_PAGE = """
 <div class="orb orb2"></div>
 <div class="card">
   <div class="header">
-    <img src="/static/logo.png" style="width:38px;height:38px;border-radius:8px;object-fit:cover;box-shadow:0 0 12px rgba(0,180,216,0.4);" alt="N">
+    <img src="/logo.png" style="width:38px;height:38px;border-radius:8px;object-fit:cover;box-shadow:0 0 12px rgba(0,180,216,0.4);flex-shrink:0;" alt="N">
     <div class="logo">BN HUB</div>
     <div class="badge">KEY SYSTEM</div>
   </div>
@@ -729,6 +729,16 @@ function copyKey() {
 </body>
 </html>
 """
+
+@app.route("/staticbg.jpg")
+def serve_bg():
+    from flask import send_file
+    return send_file("staticbg.jpg", mimetype="image/jpeg")
+
+@app.route("/logo.png")
+def serve_logo():
+    from flask import send_file
+    return send_file("logo.png", mimetype="image/png")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
