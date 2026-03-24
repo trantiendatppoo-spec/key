@@ -225,13 +225,17 @@ def admin_keys():
             expired.append(entry)
         else:
             active.append(entry)
-    return jsonify({
-        "tong_tat_ca": len(active) + len(expired),
-        "tong_active": len(active),
-        "KEY DANG HOAT DONG": active,
-        "tong_expired": len(expired),
-        "KEY HET HAN": expired,
-    })
+    from collections import OrderedDict
+    result = OrderedDict()
+    result["tong_tat_ca"] = len(active) + len(expired)
+    result["tong_active"] = len(active)
+    result["KEY DANG HOAT DONG"] = active
+    result["tong_expired"] = len(expired)
+    result["KEY HET HAN"] = expired
+    return app.response_class(
+        response=__import__("json").dumps(result, ensure_ascii=False, indent=2),
+        mimetype="application/json"
+    )
 
 # Xóa key thủ công: /admin/revoke?token=...&key=XXXX-XXXX-XXXX-XXXX
 @app.route("/admin/revoke")
