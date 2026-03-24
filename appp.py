@@ -64,17 +64,9 @@ def auto_cleanup():
 
 threading.Thread(target=auto_cleanup, daemon=True).start()
 
-def get_secret_path():
-    # Path thay đổi mỗi giờ dựa theo thời gian
-    hour = datetime.utcnow().strftime("%Y%m%d%H")
-    return hashlib.md5((hour + "bnhub_secret").encode()).hexdigest()[:12]
-
-@app.route("/secret")
-def get_secret():
-    # Script gọi cái này để lấy path hiện tại
-    return jsonify({"path": get_secret_path()})
+def keep_alive():
     while True:
-        time.sleep(600)  # 10 phút ping 1 lần
+        time.sleep(600)
         try:
             import urllib.request
             urllib.request.urlopen("https://bnhub.onrender.com/ping")
@@ -82,6 +74,14 @@ def get_secret():
             pass
 
 threading.Thread(target=keep_alive, daemon=True).start()
+
+def get_secret_path():
+    hour = datetime.utcnow().strftime("%Y%m%d%H")
+    return hashlib.md5((hour + "bnhub_secret").encode()).hexdigest()[:12]
+
+@app.route("/secret")
+def get_secret():
+    return jsonify({"path": get_secret_path()})
 
 @app.route("/ping")
 def ping():
