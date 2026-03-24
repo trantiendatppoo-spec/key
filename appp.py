@@ -69,7 +69,7 @@ def keep_alive():
         time.sleep(600)
         try:
             import urllib.request
-            urllib.request.urlopen("https://bnhub.onrender.com/ping")
+            urllib.request.urlopen("https://bnhub.xyz/ping")
         except:
             pass
 
