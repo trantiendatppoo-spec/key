@@ -334,125 +334,289 @@ HTML_PAGE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Get Key</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<title>BN HUB | KEY SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f; --panel: #11111c; --border: #2a2a45;
-    --accent: #7c4dff; --accent2: #00e5ff;
-    --text: #e0e0ff; --muted: #6060a0;
-    --green: #00e676;
+    --bg: #080608;
+    --panel: #0e0a0e;
+    --border: #3a1a1a;
+    --red: #ff1744;
+    --yellow: #ffd600;
+    --orange: #ff6d00;
+    --text: #fff0e0;
+    --muted: #7a5a5a;
+    --green: #76ff03;
   }
   body {
-    background: var(--bg); color: var(--text);
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Rajdhani', sans-serif;
-    min-height: 100vh; display: flex;
-    align-items: center; justify-content: center;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
+
+  /* Scanlines */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Grid nền */
   body::before {
-    content: ''; position: fixed; inset: 0;
+    content: '';
+    position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(124,77,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,77,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none;
+      linear-gradient(rgba(255,23,68,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,23,68,0.04) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
   }
+
+  /* Orbs */
   .orb {
-    position: fixed; width: 500px; height: 500px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(124,77,255,0.12), transparent 70%);
-    top: -150px; left: -150px; pointer-events: none;
-    animation: float 8s ease-in-out infinite;
+    position: fixed; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,23,68,0.10), transparent 70%);
+    top: -200px; left: -200px; pointer-events: none;
+    animation: pulse 6s ease-in-out infinite;
   }
   .orb2 {
+    width: 400px; height: 400px;
     right: -150px; bottom: -150px; left: auto; top: auto;
-    background: radial-gradient(circle, rgba(0,229,255,0.08), transparent 70%);
-    animation: float 10s ease-in-out infinite reverse;
+    background: radial-gradient(circle, rgba(255,214,0,0.08), transparent 70%);
+    animation: pulse 8s ease-in-out infinite reverse;
   }
-  @keyframes float { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,30px)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Card */
   .card {
-    position: relative; background: var(--panel);
-    border: 1px solid var(--border); border-radius: 16px;
-    padding: 48px 40px; width: 480px; max-width: 95vw;
-    box-shadow: 0 0 80px rgba(124,77,255,0.08);
-    animation: fadeUp 0.5s ease;
+    position: relative;
+    background: linear-gradient(135deg, #0e0a0e 0%, #120808 100%);
+    border: 1px solid var(--red);
+    border-radius: 4px;
+    padding: 48px 40px;
+    width: 500px; max-width: 95vw;
+    box-shadow:
+      0 0 0 1px rgba(255,23,68,0.1),
+      0 0 40px rgba(255,23,68,0.15),
+      inset 0 0 60px rgba(255,23,68,0.03);
+    animation: fadeUp 0.4s ease;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
   }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-  .badge {
-    display: inline-block; font-family: 'Share Tech Mono', monospace;
-    font-size: 11px; color: var(--accent2);
-    border: 1px solid rgba(0,229,255,0.25); border-radius: 4px;
-    padding: 3px 10px; margin-bottom: 18px; letter-spacing: 2px;
+  @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Corner decorations */
+  .card::before {
+    content: '';
+    position: absolute; top: -1px; right: 20px;
+    width: 40px; height: 2px;
+    background: var(--yellow);
+    box-shadow: 0 0 8px var(--yellow);
   }
-  h1 {
-    font-size: 30px; font-weight: 700; margin-bottom: 6px;
-    background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+  .card::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 20px;
+    width: 40px; height: 2px;
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+  }
+
+  /* Header */
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px; font-weight: 900;
+    background: linear-gradient(90deg, var(--red), var(--yellow));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+    text-shadow: none;
   }
-  .sub { color: var(--muted); font-size: 14px; margin-bottom: 30px; }
-  .status-new { color: var(--green); } .status-old { color: var(--accent2); }
+  .badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; color: var(--yellow);
+    border: 1px solid rgba(255,214,0,0.3);
+    border-radius: 2px;
+    padding: 2px 8px; letter-spacing: 3px;
+    text-transform: uppercase;
+    box-shadow: 0 0 8px rgba(255,214,0,0.1);
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--red), transparent);
+    margin: 16px 0 24px;
+    box-shadow: 0 0 8px rgba(255,23,68,0.3);
+  }
+
+  .sub {
+    font-size: 13px; margin-bottom: 24px; letter-spacing: 1px;
+  }
+  .status-new { color: var(--green); }
+  .status-old { color: var(--yellow); }
+
+  /* Key box */
+  .key-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; color: var(--red);
+    letter-spacing: 3px; margin-bottom: 8px;
+    text-transform: uppercase;
+  }
   .key-box {
-    background: #0d0d1a; border: 1px solid var(--accent); border-radius: 10px;
-    padding: 16px 20px; margin-bottom: 14px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    box-shadow: 0 0 24px rgba(124,77,255,0.12);
+    background: #0a0608;
+    border: 1px solid var(--red);
+    border-radius: 2px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    box-shadow:
+      0 0 20px rgba(255,23,68,0.1),
+      inset 0 0 20px rgba(255,23,68,0.03);
+    position: relative;
+  }
+  .key-box::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, var(--red), var(--yellow));
   }
   .key-text {
-    font-family: 'Share Tech Mono', monospace; font-size: 17px;
-    color: #fff; letter-spacing: 3px; word-break: break-all;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px; color: #fff;
+    letter-spacing: 2px; word-break: break-all;
+    line-height: 1.6;
   }
   .copy-btn {
-    background: var(--accent); border: none; border-radius: 8px;
-    color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700;
-    font-size: 13px; padding: 8px 16px; cursor: pointer;
-    white-space: nowrap; transition: all 0.2s; letter-spacing: 1px;
+    background: transparent;
+    border: 1px solid var(--red);
+    border-radius: 2px;
+    color: var(--red);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700; font-size: 11px;
+    padding: 8px 14px; cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
-  .copy-btn:hover { background: #9c6fff; transform: scale(1.05); }
-  .copy-btn.copied { background: var(--green); }
+  .copy-btn:hover {
+    background: var(--red); color: #000;
+    box-shadow: 0 0 16px rgba(255,23,68,0.5);
+  }
+  .copy-btn.copied {
+    background: var(--green); border-color: var(--green); color: #000;
+    box-shadow: 0 0 16px rgba(118,255,3,0.4);
+  }
+
+  /* Info chips */
   .info-row { display: flex; gap: 10px; margin-bottom: 24px; }
   .chip {
-    flex: 1; background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
+    flex: 1;
+    background: rgba(255,23,68,0.04);
+    border: 1px solid rgba(255,23,68,0.2);
+    border-radius: 2px; padding: 10px 14px;
+    position: relative;
   }
-  .chip span { display: block; color: var(--muted); font-size: 11px; letter-spacing: 1px; margin-bottom: 3px; }
-  .chip strong { color: var(--text); font-size: 15px; }
-  hr { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+  .chip span {
+    display: block; color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; margin-bottom: 4px;
+  }
+  .chip strong { color: var(--yellow); font-size: 15px; font-weight: 700; }
+
+  hr { border: none; border-top: 1px solid rgba(255,23,68,0.15); margin: 20px 0; }
+
   .notice {
-    background: rgba(124,77,255,0.06); border: 1px solid rgba(124,77,255,0.18);
-    border-radius: 8px; padding: 12px 16px; font-size: 13px;
-    color: var(--muted); line-height: 1.7;
+    background: rgba(255,23,68,0.04);
+    border: 1px solid rgba(255,23,68,0.15);
+    border-left: 2px solid var(--yellow);
+    border-radius: 2px; padding: 12px 16px;
+    font-size: 13px; color: var(--muted); line-height: 1.8;
   }
   .notice b { color: var(--text); }
+
+  /* Glitch title */
+  .glitch {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px; font-weight: 900;
+    color: #fff;
+    position: relative;
+    margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(255,23,68,0.5);
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute; top: 0; left: 0;
+    width: 100%;
+  }
+  .glitch::before {
+    color: var(--red); clip: rect(0,0,0,0);
+    animation: glitch1 3s infinite linear;
+  }
+  .glitch::after {
+    color: var(--yellow); clip: rect(0,0,0,0);
+    animation: glitch2 3s infinite linear;
+  }
+  @keyframes glitch1 {
+    0%,94%,100%{clip:rect(0,9999px,0,0)}
+    95%{clip:rect(0,9999px,30px,0); transform:translate(-2px,0)}
+    97%{clip:rect(20px,9999px,40px,0); transform:translate(2px,0)}
+  }
+  @keyframes glitch2 {
+    0%,96%,100%{clip:rect(0,9999px,0,0)}
+    97%{clip:rect(10px,9999px,25px,0); transform:translate(2px,0)}
+    99%{clip:rect(30px,9999px,50px,0); transform:translate(-2px,0)}
+  }
 </style>
 </head>
 <body>
-<div class="orb"></div><div class="orb orb2"></div>
+<div class="orb"></div>
+<div class="orb orb2"></div>
 <div class="card">
-  <div class="badge">// KEY SYSTEM</div>
-  <h1>🔑 Key của bạn</h1>
+  <div class="header">
+    <div class="logo">BN HUB</div>
+    <div class="badge">KEY SYSTEM</div>
+  </div>
+  <div class="divider"></div>
+  <div class="glitch" data-text="ACCESS KEY">ACCESS KEY</div>
   <p class="sub">
-    {% if status == "new" %}<span class="status-new">✦ Key mới đã được tạo tự động cho bạn</span>
-    {% else %}<span class="status-old">✦ Bạn đã có key còn hạn sử dụng</span>{% endif %}
+    {% if status == "new" %}<span class="status-new">▶ KEY MỚI ĐÃ ĐƯỢC TẠO CHO BẠN</span>
+    {% else %}<span class="status-old">▶ KEY CỦA BẠN VẪN CÒN HIỆU LỰC</span>{% endif %}
   </p>
+  <div class="key-label">// YOUR ACCESS KEY</div>
   <div class="key-box">
     <span class="key-text" id="keyText">{{ key }}</span>
     <button class="copy-btn" id="copyBtn" onclick="copyKey()">COPY</button>
   </div>
   <div class="info-row">
-    <div class="chip"><span>HẾT HẠN</span><strong>{{ expires }}</strong></div>
-    <div class="chip"><span>CÒN LẠI</span><strong>{{ days_left }}</strong></div>
+    <div class="chip"><span>EXPIRES</span><strong>{{ expires }}</strong></div>
+    <div class="chip"><span>TIME LEFT</span><strong>{{ days_left }}</strong></div>
   </div>
   <hr>
   <div class="notice">
-    <b>Hướng dẫn:</b><br>
+    <b>HƯỚNG DẪN:</b><br>
     Copy key → Mở script trong Roblox → Dán vào ô nhập key → Nhấn Xác nhận.<br>
-    Key tự động gia hạn mỗi lần bạn vào lại link này sau khi hết hạn.
+    Key tự động gia hạn khi bạn vào lại link này sau khi hết hạn.
   </div>
 </div>
 <script>
 function copyKey() {
   navigator.clipboard.writeText(document.getElementById('keyText').innerText).then(() => {
     const btn = document.getElementById('copyBtn');
-    btn.textContent = '✓ ĐÃ COPY'; btn.classList.add('copied');
+    btn.textContent = '✓ COPIED'; btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
   });
 }
