@@ -269,7 +269,7 @@ def admin_addkey():
         with get_db() as db:
             db.execute(
                 "INSERT OR REPLACE INTO keys (key, ip_hash, username, created, expires) VALUES (?,?,?,?,?)",
-                (key, ip_hash, "admin", datetime.utcnow().isoformat(), expires)
+                (key, ip_hash, None, datetime.utcnow().isoformat(), expires)
             )
             db.commit()
         return jsonify({"ok": True, "key": key, "permanent": permanent, "expires": expires})
