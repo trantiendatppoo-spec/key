@@ -1,24 +1,25 @@
 from flask import Flask, request, jsonify, render_template_string, make_response
-import sqlite3, uuid, hashlib, os, threading, time, random, string
+import uuid, hashlib, os, threading, time, random, string
+import psycopg2, psycopg2.extras
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-DB = "keys.db"
 KEY_EXPIRE_HOURS = 12
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "CHANGE_THIS_SECRET")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 # ─── DATABASE ────────────────────────────────────────────────────────────────
 
 def get_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
-    with get_db() as db:
-        db.execute("""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS keys (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                id        SERIAL PRIMARY KEY,
                 key       TEXT UNIQUE NOT NULL,
                 ip_hash   TEXT NOT NULL,
                 username  TEXT DEFAULT NULL,
@@ -26,7 +27,7 @@ def init_db():
                 expires   TEXT NOT NULL
             )
         """)
-        db.execute("""
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id  TEXT PRIMARY KEY,
                 ip_hash     TEXT NOT NULL,
@@ -34,14 +35,14 @@ def init_db():
                 used        INTEGER DEFAULT 0
             )
         """)
-        db.execute("""
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS tokens (
                 token     TEXT PRIMARY KEY,
                 created   TEXT NOT NULL,
                 used      INTEGER DEFAULT 0
             )
         """)
-        db.commit()
+        conn.commit()
 
 init_db()
 
@@ -52,13 +53,15 @@ def auto_cleanup():
         time.sleep(3600)
         try:
             now = datetime.utcnow().isoformat()
-            with get_db() as db:
-                c1 = db.execute("DELETE FROM keys WHERE expires < ?", (now,))
-                # Xóa token cũ hơn 30 phút hoặc đã dùng
-                c2 = db.execute("DELETE FROM tokens WHERE used=1 OR created < ?",
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM keys WHERE expires < %s", (now,))
+                c1 = cur.rowcount
+                cur.execute("DELETE FROM tokens WHERE used=1 OR created < %s",
                     ((datetime.utcnow() - timedelta(minutes=30)).isoformat(),))
-                db.commit()
-                print(f"[CLEANUP] keys: {c1.rowcount}, tokens: {c2.rowcount}")
+                c2 = cur.rowcount
+                conn.commit()
+                print(f"[CLEANUP] keys: {c1}, tokens: {c2}")
         except Exception as e:
             print(f"[CLEANUP ERROR] {e}")
 
@@ -111,9 +114,10 @@ def check_admin():
 def gentoken():
     token = str(uuid.uuid4()).replace("-", "")
     now = datetime.utcnow().isoformat()
-    with get_db() as db:
-        db.execute("INSERT INTO tokens (token, created) VALUES (?,?)", (token, now))
-        db.commit()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO tokens (token, created) VALUES (%s,%s)", (token, now))
+        conn.commit()
     getkey_url = f"https://bnhub.xyz/getkey?t={token}"
     return jsonify({"token": token, "url": getkey_url})
 
@@ -135,13 +139,13 @@ def secret_getkey(secret_path):
     ip_hash = hash_ip(ip)
     now = datetime.utcnow()
 
-    with get_db() as db:
-        db.execute("DELETE FROM keys WHERE ip_hash=? AND expires < ?", (ip_hash, now.isoformat()))
-        db.commit()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM keys WHERE ip_hash=%s AND expires < %s", (ip_hash, now.isoformat()))
+        conn.commit()
 
-        row = db.execute(
-            "SELECT * FROM keys WHERE ip_hash=? ORDER BY created DESC LIMIT 1", (ip_hash,)
-        ).fetchone()
+        cur.execute("SELECT * FROM keys WHERE ip_hash=%s ORDER BY created DESC LIMIT 1", (ip_hash,))
+        row = db_fetchone(cur)
 
         if row:
             expires_dt = datetime.fromisoformat(row["expires"])
@@ -152,15 +156,17 @@ def secret_getkey(secret_path):
             )
 
         new_key = generate_key()
-        while db.execute("SELECT 1 FROM keys WHERE key=?", (new_key,)).fetchone():
+        cur.execute("SELECT 1 FROM keys WHERE key=%s", (new_key,))
+        while cur.fetchone():
             new_key = generate_key()
+            cur.execute("SELECT 1 FROM keys WHERE key=%s", (new_key,))
 
         expires_str = (now + timedelta(hours=KEY_EXPIRE_HOURS)).isoformat()
-        db.execute(
-            "INSERT INTO keys (key, ip_hash, created, expires) VALUES (?,?,?,?)",
+        cur.execute(
+            "INSERT INTO keys (key, ip_hash, created, expires) VALUES (%s,%s,%s,%s)",
             (new_key, ip_hash, now.isoformat(), expires_str)
         )
-        db.commit()
+        conn.commit()
 
     return render_template_string(HTML_PAGE,
         key=new_key, status="new",
@@ -176,23 +182,27 @@ def checkkey():
         return jsonify({"valid": False, "reason": "no_key"})
 
     now = datetime.utcnow().isoformat()
-    with get_db() as db:
-        row = db.execute("SELECT * FROM keys WHERE key=?", (key,)).fetchone()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM keys WHERE key=%s", (key,))
+        row = db_fetchone(cur)
 
     if not row:
         return jsonify({"valid": False, "reason": "invalid"})
     if row["expires"] < now:
-        with get_db() as db:
-            db.execute("DELETE FROM keys WHERE key=?", (key,))
-            db.commit()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM keys WHERE key=%s", (key,))
+            conn.commit()
         return jsonify({"valid": False, "reason": "expired"})
 
     # Lần đầu dùng key → lưu username vào
     if not row["username"]:
         if username:
-            with get_db() as db:
-                db.execute("UPDATE keys SET username=? WHERE key=?", (username, key))
-                db.commit()
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute("UPDATE keys SET username=%s WHERE key=%s", (username, key))
+                conn.commit()
     else:
         # Đã có username → check phải đúng
         if username.lower() != row["username"].lower():
@@ -208,8 +218,10 @@ def admin_keys():
     if not check_admin():
         return jsonify({"error": "unauthorized"}), 403
     now = datetime.utcnow().isoformat()
-    with get_db() as db:
-        rows = db.execute("SELECT * FROM keys ORDER BY created DESC").fetchall()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM keys ORDER BY created DESC")
+        rows = db_fetchall(cur)
     active = []
     expired = []
     for r in rows:
@@ -243,9 +255,10 @@ def admin_revoke():
     if not check_admin():
         return jsonify({"error": "unauthorized"}), 403
     key = request.args.get("key", "").upper()
-    with get_db() as db:
-        db.execute("DELETE FROM keys WHERE key=?", (key,))
-        db.commit()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM keys WHERE key=%s", (key,))
+        conn.commit()
     return jsonify({"ok": True, "deleted": key})
 
 # Thêm key thủ công: /admin/addkey?token=...&key=XXXX&permanent=1
@@ -266,12 +279,13 @@ def admin_addkey():
         expires = (datetime.utcnow() + timedelta(hours=KEY_EXPIRE_HOURS)).isoformat()
     ip_hash = "admin"
     try:
-        with get_db() as db:
-            db.execute(
-                "INSERT OR REPLACE INTO keys (key, ip_hash, username, created, expires) VALUES (?,?,?,?,?)",
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO keys (key, ip_hash, username, created, expires) VALUES (%s,%s,%s,%s,%s) ON CONFLICT (key) DO UPDATE SET expires=EXCLUDED.expires, ip_hash=EXCLUDED.ip_hash",
                 (key, ip_hash, None, datetime.utcnow().isoformat(), expires)
             )
-            db.commit()
+            conn.commit()
         return jsonify({"ok": True, "key": key, "permanent": permanent, "expires": expires})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -282,10 +296,12 @@ def admin_cleanup():
     if not check_admin():
         return jsonify({"error": "unauthorized"}), 403
     now = datetime.utcnow().isoformat()
-    with get_db() as db:
-        cur = db.execute("DELETE FROM keys WHERE expires < ?", (now,))
-        db.commit()
-    return jsonify({"ok": True, "deleted": cur.rowcount})
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM keys WHERE expires < %s", (now,))
+        deleted = cur.rowcount
+        conn.commit()
+    return jsonify({"ok": True, "deleted": deleted})
 
 # Thống kê: /admin/stats?token=...
 @app.route("/admin/stats")
@@ -293,10 +309,11 @@ def admin_stats():
     if not check_admin():
         return jsonify({"error": "unauthorized"}), 403
     now = datetime.utcnow().isoformat()
-    with get_db() as db:
-        total = db.execute("SELECT COUNT(*) FROM keys").fetchone()[0]
-        active = db.execute("SELECT COUNT(*) FROM keys WHERE expires > ?", (now,)).fetchone()[0]
-        expired = db.execute("SELECT COUNT(*) FROM keys WHERE expires <= ?", (now,)).fetchone()[0]
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM keys"); total = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM keys WHERE expires > %s", (now,)); active = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM keys WHERE expires <= %s", (now,)); expired = cur.fetchone()[0]
     return jsonify({"total": total, "active": active, "expired": expired})
 
 # ─── HTML ─────────────────────────────────────────────────────────────────────
