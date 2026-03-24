@@ -21,6 +21,7 @@ def init_db():
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 key       TEXT UNIQUE NOT NULL,
                 ip_hash   TEXT NOT NULL,
+                username  TEXT DEFAULT NULL,
                 created   TEXT NOT NULL,
                 expires   TEXT NOT NULL
             )
@@ -63,7 +64,15 @@ def auto_cleanup():
 
 threading.Thread(target=auto_cleanup, daemon=True).start()
 
-def keep_alive():
+def get_secret_path():
+    # Path thay đổi mỗi giờ dựa theo thời gian
+    hour = datetime.utcnow().strftime("%Y%m%d%H")
+    return hashlib.md5((hour + "bnhub_secret").encode()).hexdigest()[:12]
+
+@app.route("/secret")
+def get_secret():
+    # Script gọi cái này để lấy path hiện tại
+    return jsonify({"path": get_secret_path()})
     while True:
         time.sleep(600)  # 10 phút ping 1 lần
         try:
@@ -113,43 +122,18 @@ def gentoken():
 # Tạo session cookie rồi redirect về /getkey
 @app.route("/checkpoint")
 def checkpoint():
-    ip = get_real_ip()
-    ip_hash = hash_ip(ip)
-    now = datetime.utcnow()
-    session_id = str(uuid.uuid4()).replace("-", "")
-
-    with get_db() as db:
-        db.execute(
-            "INSERT INTO sessions (session_id, ip_hash, created) VALUES (?,?,?)",
-            (session_id, ip_hash, now.isoformat())
-        )
-        db.commit()
-
-    resp = make_response(render_template_string(REDIRECT_PAGE))
-    resp.set_cookie("bnhub_session", session_id, max_age=300, httponly=True)  # 5 phút
+    secret = get_secret_path()
+    resp = make_response(render_template_string(REDIRECT_PAGE, url=f"/{secret}"))
     return resp
 
-@app.route("/getkey")
-def getkey_page():
-    # Check cookie session
-    session_id = request.cookies.get("bnhub_session", "")
+@app.route("/<path:secret_path>")
+def secret_getkey(secret_path):
+    if secret_path != get_secret_path():
+        return render_template_string(ERROR_PAGE, msg="Truy cập không hợp lệ! | Vui lòng lấy key từ script.")
+
     ip = get_real_ip()
     ip_hash = hash_ip(ip)
     now = datetime.utcnow()
-
-    if session_id:
-        with get_db() as db:
-            sess = db.execute(
-                "SELECT * FROM sessions WHERE session_id=? AND ip_hash=?",
-                (session_id, ip_hash)
-            ).fetchone()
-            if not sess:
-                return render_template_string(ERROR_PAGE, msg="Truy cập không hợp lệ!<br>Vui lòng lấy key từ script.")
-            created = datetime.fromisoformat(sess["created"])
-            if datetime.utcnow() - created > timedelta(minutes=5):
-                return render_template_string(ERROR_PAGE, msg="Phiên đã hết hạn!<br>Vui lòng lấy key lại từ script.")
-    else:
-        return render_template_string(ERROR_PAGE, msg="Truy cập không hợp lệ!<br>Vui lòng lấy key từ script.")
 
     with get_db() as db:
         db.execute("DELETE FROM keys WHERE ip_hash=? AND expires < ?", (ip_hash, now.isoformat()))
@@ -187,12 +171,9 @@ def getkey_page():
 @app.route("/checkkey")
 def checkkey():
     key = request.args.get("key", "").strip().upper()
+    username = request.args.get("user", "").strip()
     if not key:
         return jsonify({"valid": False, "reason": "no_key"})
-
-    # Key admin vĩnh viễn
-    if key == ADMIN_KEY:
-        return jsonify({"valid": True, "expires": "9999-12-31"})
 
     now = datetime.utcnow().isoformat()
     with get_db() as db:
@@ -201,11 +182,21 @@ def checkkey():
     if not row:
         return jsonify({"valid": False, "reason": "invalid"})
     if row["expires"] < now:
-        # Xóa luôn key hết hạn khi check
         with get_db() as db:
             db.execute("DELETE FROM keys WHERE key=?", (key,))
             db.commit()
         return jsonify({"valid": False, "reason": "expired"})
+
+    # Lần đầu dùng key → lưu username vào
+    if not row["username"]:
+        if username:
+            with get_db() as db:
+                db.execute("UPDATE keys SET username=? WHERE key=?", (username, key))
+                db.commit()
+    else:
+        # Đã có username → check phải đúng
+        if username.lower() != row["username"].lower():
+            return jsonify({"valid": False, "reason": "wrong_user", "msg": "Key này đã được dùng bởi tài khoản khác!"})
 
     return jsonify({"valid": True, "expires": row["expires"][:10]})
 
@@ -264,7 +255,7 @@ def admin_stats():
 REDIRECT_PAGE = """
 <!DOCTYPE html><html><head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=/getkey">
+<meta http-equiv="refresh" content="0;url={{ url }}">
 <title>Đang chuyển hướng...</title>
 </head><body></body></html>
 """
