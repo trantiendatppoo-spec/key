@@ -339,15 +339,15 @@ HTML_PAGE = """
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #080608;
-    --panel: #0e0a0e;
-    --border: #3a1a1a;
-    --red: #ff1744;
-    --yellow: #ffd600;
-    --orange: #ff6d00;
-    --text: #fff0e0;
-    --muted: #7a5a5a;
-    --green: #76ff03;
+    --bg: #020b18;
+    --panel: #061220;
+    --border: #0d3a5c;
+    --blue: #00b4d8;
+    --blue2: #90e0ef;
+    --blue3: #caf0f8;
+    --text: #e0f7ff;
+    --muted: #4a7a99;
+    --green: #00f5d4;
   }
   body {
     background: var(--bg);
@@ -380,8 +380,8 @@ HTML_PAGE = """
     content: '';
     position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(255,23,68,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,23,68,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(0,180,216,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,216,0.04) 1px, transparent 1px);
     background-size: 50px 50px;
     pointer-events: none;
   }
@@ -389,30 +389,30 @@ HTML_PAGE = """
   /* Orbs */
   .orb {
     position: fixed; width: 600px; height: 600px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,23,68,0.10), transparent 70%);
+    background: radial-gradient(circle, rgba(0,180,216,0.12), transparent 70%);
     top: -200px; left: -200px; pointer-events: none;
     animation: pulse 6s ease-in-out infinite;
   }
   .orb2 {
     width: 400px; height: 400px;
     right: -150px; bottom: -150px; left: auto; top: auto;
-    background: radial-gradient(circle, rgba(255,214,0,0.08), transparent 70%);
+    background: radial-gradient(circle, rgba(144,224,239,0.08), transparent 70%);
     animation: pulse 8s ease-in-out infinite reverse;
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
   /* Card */
   .card {
-    position: relative;
-    background: linear-gradient(135deg, #0e0a0e 0%, #120808 100%);
-    border: 1px solid var(--red);
+    position: relative; z-index: 1;
+    background: linear-gradient(135deg, #061220 0%, #120808 100%);
+    border: 1px solid var(--blue);
     border-radius: 4px;
     padding: 48px 40px;
     width: 500px; max-width: 95vw;
     box-shadow:
-      0 0 0 1px rgba(255,23,68,0.1),
-      0 0 40px rgba(255,23,68,0.15),
-      inset 0 0 60px rgba(255,23,68,0.03);
+      0 0 0 1px rgba(0,180,216,0.1),
+      0 0 40px rgba(0,180,216,0.15),
+      inset 0 0 60px rgba(0,180,216,0.03);
     animation: fadeUp 0.4s ease;
     clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
   }
@@ -423,15 +423,15 @@ HTML_PAGE = """
     content: '';
     position: absolute; top: -1px; right: 20px;
     width: 40px; height: 2px;
-    background: var(--yellow);
-    box-shadow: 0 0 8px var(--yellow);
+    background: var(--blue2);
+    box-shadow: 0 0 8px var(--blue2);
   }
   .card::after {
     content: '';
     position: absolute; bottom: -1px; left: 20px;
     width: 40px; height: 2px;
-    background: var(--red);
-    box-shadow: 0 0 8px var(--red);
+    background: var(--blue);
+    box-shadow: 0 0 8px var(--blue);
   }
 
   /* Header */
@@ -439,59 +439,59 @@ HTML_PAGE = """
   .logo {
     font-family: 'Orbitron', sans-serif;
     font-size: 22px; font-weight: 900;
-    background: linear-gradient(90deg, var(--red), var(--yellow));
+    background: linear-gradient(90deg, var(--blue), var(--blue2));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     letter-spacing: 2px;
     text-shadow: none;
   }
   .badge {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 10px; color: var(--yellow);
-    border: 1px solid rgba(255,214,0,0.3);
+    font-size: 10px; color: var(--blue2);
+    border: 1px solid rgba(0,180,216,0.3);
     border-radius: 2px;
     padding: 2px 8px; letter-spacing: 3px;
     text-transform: uppercase;
-    box-shadow: 0 0 8px rgba(255,214,0,0.1);
+    box-shadow: 0 0 8px rgba(0,180,216,0.1);
   }
 
   .divider {
     height: 1px;
-    background: linear-gradient(90deg, var(--red), transparent);
+    background: linear-gradient(90deg, var(--blue), transparent);
     margin: 16px 0 24px;
-    box-shadow: 0 0 8px rgba(255,23,68,0.3);
+    box-shadow: 0 0 8px rgba(0,180,216,0.3);
   }
 
   .sub {
     font-size: 13px; margin-bottom: 24px; letter-spacing: 1px;
   }
   .status-new { color: var(--green); }
-  .status-old { color: var(--yellow); }
+  .status-old { color: var(--blue2); }
 
   /* Key box */
   .key-label {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 10px; color: var(--red);
+    font-size: 10px; color: var(--blue);
     letter-spacing: 3px; margin-bottom: 8px;
     text-transform: uppercase;
   }
   .key-box {
     background: #0a0608;
-    border: 1px solid var(--red);
+    border: 1px solid var(--blue);
     border-radius: 2px;
     padding: 14px 18px;
     margin-bottom: 16px;
     display: flex; align-items: center;
     justify-content: space-between; gap: 12px;
     box-shadow:
-      0 0 20px rgba(255,23,68,0.1),
-      inset 0 0 20px rgba(255,23,68,0.03);
+      0 0 20px rgba(0,180,216,0.1),
+      inset 0 0 20px rgba(0,180,216,0.03);
     position: relative;
   }
   .key-box::before {
     content: '';
     position: absolute; top: 0; left: 0;
     width: 3px; height: 100%;
-    background: linear-gradient(180deg, var(--red), var(--yellow));
+    background: linear-gradient(180deg, var(--blue), var(--blue2));
   }
   .key-text {
     font-family: 'Share Tech Mono', monospace;
@@ -501,9 +501,9 @@ HTML_PAGE = """
   }
   .copy-btn {
     background: transparent;
-    border: 1px solid var(--red);
+    border: 1px solid var(--blue);
     border-radius: 2px;
-    color: var(--red);
+    color: var(--blue);
     font-family: 'Orbitron', sans-serif;
     font-weight: 700; font-size: 11px;
     padding: 8px 14px; cursor: pointer;
@@ -513,20 +513,20 @@ HTML_PAGE = """
     text-transform: uppercase;
   }
   .copy-btn:hover {
-    background: var(--red); color: #000;
-    box-shadow: 0 0 16px rgba(255,23,68,0.5);
+    background: var(--blue); color: #000;
+    box-shadow: 0 0 16px rgba(0,180,216,0.5);
   }
   .copy-btn.copied {
     background: var(--green); border-color: var(--green); color: #000;
-    box-shadow: 0 0 16px rgba(118,255,3,0.4);
+    box-shadow: 0 0 16px rgba(0,245,212,0.4);
   }
 
   /* Info chips */
   .info-row { display: flex; gap: 10px; margin-bottom: 24px; }
   .chip {
     flex: 1;
-    background: rgba(255,23,68,0.04);
-    border: 1px solid rgba(255,23,68,0.2);
+    background: rgba(0,180,216,0.04);
+    border: 1px solid rgba(0,180,216,0.2);
     border-radius: 2px; padding: 10px 14px;
     position: relative;
   }
@@ -535,14 +535,14 @@ HTML_PAGE = """
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px; letter-spacing: 2px; margin-bottom: 4px;
   }
-  .chip strong { color: var(--yellow); font-size: 15px; font-weight: 700; }
+  .chip strong { color: var(--blue2); font-size: 15px; font-weight: 700; }
 
-  hr { border: none; border-top: 1px solid rgba(255,23,68,0.15); margin: 20px 0; }
+  hr { border: none; border-top: 1px solid rgba(0,180,216,0.15); margin: 20px 0; }
 
   .notice {
-    background: rgba(255,23,68,0.04);
-    border: 1px solid rgba(255,23,68,0.15);
-    border-left: 2px solid var(--yellow);
+    background: rgba(0,180,216,0.04);
+    border: 1px solid rgba(0,180,216,0.15);
+    border-left: 2px solid var(--blue2);
     border-radius: 2px; padding: 12px 16px;
     font-size: 13px; color: var(--muted); line-height: 1.8;
   }
@@ -555,7 +555,7 @@ HTML_PAGE = """
     color: #fff;
     position: relative;
     margin-bottom: 4px;
-    text-shadow: 0 0 20px rgba(255,23,68,0.5);
+    text-shadow: 0 0 20px rgba(0,180,216,0.5);
   }
   .glitch::before, .glitch::after {
     content: attr(data-text);
@@ -563,11 +563,11 @@ HTML_PAGE = """
     width: 100%;
   }
   .glitch::before {
-    color: var(--red); clip: rect(0,0,0,0);
+    color: var(--blue); clip: rect(0,0,0,0);
     animation: glitch1 3s infinite linear;
   }
   .glitch::after {
-    color: var(--yellow); clip: rect(0,0,0,0);
+    color: var(--blue2); clip: rect(0,0,0,0);
     animation: glitch2 3s infinite linear;
   }
   @keyframes glitch1 {
@@ -612,7 +612,113 @@ HTML_PAGE = """
     Key tự động gia hạn khi bạn vào lại link này sau khi hết hạn.
   </div>
 </div>
+<canvas id="bg3d" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 <script>
+// 3D Particles
+const canvas = document.getElementById('bg3d');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+const particles = Array.from({length: 80}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  z: Math.random() * 1000,
+  vx: (Math.random() - 0.5) * 0.3,
+  vy: (Math.random() - 0.5) * 0.3,
+  vz: Math.random() * 0.5 + 0.1,
+}));
+
+const lines = Array.from({length: 12}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  w: Math.random() * 80 + 20,
+  speed: Math.random() * 1.5 + 0.5,
+  opacity: Math.random() * 0.3 + 0.05,
+}));
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2, cy = canvas.height / 2, fov = 500;
+
+  // Scan lines flying
+  lines.forEach(l => {
+    l.y += l.speed;
+    if (l.y > canvas.height) { l.y = -5; l.x = Math.random() * canvas.width; }
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(0,180,216,${l.opacity})`;
+    ctx.lineWidth = 1;
+    ctx.moveTo(l.x, l.y);
+    ctx.lineTo(l.x + l.w, l.y);
+    ctx.stroke();
+  });
+
+  // 3D particles
+  particles.forEach(p => {
+    p.z -= p.vz;
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.z <= 0) p.z = 1000;
+    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+    const scale = fov / (fov + p.z);
+    const sx = (p.x - cx) * scale + cx;
+    const sy = (p.y - cy) * scale + cy;
+    const size = scale * 2.5;
+    const alpha = scale * 0.6;
+
+    ctx.beginPath();
+    ctx.arc(sx, sy, size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,${Math.floor(180 + scale*60)},216,${alpha})`;
+    ctx.fill();
+  });
+
+  // Connect nearby
+  for (let i = 0; i < particles.length; i++) {
+    const a = particles[i];
+    const sa = fov / (fov + a.z);
+    const ax = (a.x - cx) * sa + cx;
+    const ay = (a.y - cy) * sa + cy;
+    for (let j = i+1; j < particles.length; j++) {
+      const b = particles[j];
+      const sb = fov / (fov + b.z);
+      const bx = (b.x - cx) * sb + cx;
+      const by = (b.y - cy) * sb + cy;
+      const dist = Math.hypot(ax-bx, ay-by);
+      if (dist < 80) {
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(0,180,216,${0.08 * (1 - dist/80)})`;
+        ctx.lineWidth = 0.5;
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+    }
+  }
+
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// Card 3D tilt
+const card = document.querySelector('.card');
+document.addEventListener('mousemove', e => {
+  const rect = card.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  const dx = (e.clientX - cx) / (window.innerWidth/2);
+  const dy = (e.clientY - cy) / (window.innerHeight/2);
+  card.style.transform = `perspective(1000px) rotateY(${dx*8}deg) rotateX(${-dy*8}deg) scale(1.02)`;
+  card.style.boxShadow = `${-dx*20}px ${-dy*20}px 60px rgba(0,180,216,0.2), 0 0 40px rgba(0,180,216,0.15)`;
+});
+document.addEventListener('mouseleave', () => {
+  card.style.transform = '';
+  card.style.boxShadow = '';
+});
+
+// Copy
 function copyKey() {
   navigator.clipboard.writeText(document.getElementById('keyText').innerText).then(() => {
     const btn = document.getElementById('copyBtn');
