@@ -210,11 +210,27 @@ def admin_keys():
     now = datetime.utcnow().isoformat()
     with get_db() as db:
         rows = db.execute("SELECT * FROM keys ORDER BY created DESC").fetchall()
-    return jsonify([{
-        "id": r["id"], "key": r["key"],
-        "created": r["created"][:10], "expires": r["expires"][:10],
-        "expired": r["expires"] < now
-    } for r in rows])
+    active = []
+    expired = []
+    for r in rows:
+        is_permanent = r["expires"].startswith("9999")
+        is_expired = r["expires"] < now
+        entry = {
+            "key": r["key"],
+            "username": r["username"] or "chua dung",
+            "created": r["created"][:16].replace("T", " "),
+            "expires": "VINH VIEN" if is_permanent else r["expires"][:16].replace("T", " "),
+        }
+        if is_expired:
+            expired.append(entry)
+        else:
+            active.append(entry)
+    return jsonify({
+        "KEY DANG HOAT DONG": active,
+        "tong_active": len(active),
+        "KEY HET HAN": expired,
+        "tong_expired": len(expired),
+    })
 
 # Xóa key thủ công: /admin/revoke?token=...&key=XXXX-XXXX-XXXX-XXXX
 @app.route("/admin/revoke")
