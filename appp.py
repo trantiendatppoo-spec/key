@@ -227,6 +227,34 @@ def admin_revoke():
         db.commit()
     return jsonify({"ok": True, "deleted": key})
 
+# Thêm key thủ công: /admin/addkey?token=...&key=XXXX&permanent=1
+@app.route("/admin/addkey")
+def admin_addkey():
+    if not check_admin():
+        return jsonify({"error": "unauthorized"}), 403
+    key = request.args.get("key", "").upper().strip()
+    permanent = request.args.get("permanent", "0") == "1"
+    if not key:
+        # Tự tạo key ngẫu nhiên nếu không truyền
+        chars = string.ascii_uppercase + string.digits
+        key = "-".join("".join(random.choices(chars, k=8)) for _ in range(8))
+    # Nếu vĩnh viễn thì expires = 9999-12-31
+    if permanent:
+        expires = "9999-12-31T00:00:00"
+    else:
+        expires = (datetime.utcnow() + timedelta(hours=KEY_EXPIRE_HOURS)).isoformat()
+    ip_hash = "admin"
+    try:
+        with get_db() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO keys (key, ip_hash, username, created, expires) VALUES (?,?,?,?,?)",
+                (key, ip_hash, "admin", datetime.utcnow().isoformat(), expires)
+            )
+            db.commit()
+        return jsonify({"ok": True, "key": key, "permanent": permanent, "expires": expires})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Xóa tất cả key hết hạn ngay: /admin/cleanup?token=...
 @app.route("/admin/cleanup")
 def admin_cleanup():
