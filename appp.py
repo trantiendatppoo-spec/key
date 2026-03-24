@@ -226,10 +226,11 @@ def admin_keys():
         else:
             active.append(entry)
     return jsonify({
-        "KEY DANG HOAT DONG": active,
+        "tong_tat_ca": len(active) + len(expired),
         "tong_active": len(active),
-        "KEY HET HAN": expired,
+        "KEY DANG HOAT DONG": active,
         "tong_expired": len(expired),
+        "KEY HET HAN": expired,
     })
 
 # Xóa key thủ công: /admin/revoke?token=...&key=XXXX-XXXX-XXXX-XXXX
