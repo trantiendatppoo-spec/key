@@ -62,7 +62,7 @@ init_db()
 
 def auto_cleanup():
     while True:
-        time.sleep(3600)
+        time.sleep(900)  # 15 phút
         try:
             now = datetime.utcnow().isoformat()
             with get_db() as conn:
