@@ -42,6 +42,18 @@ def init_db():
                 used      INTEGER DEFAULT 0
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS key_logs (
+                id        SERIAL PRIMARY KEY,
+                key       TEXT NOT NULL,
+                username  TEXT DEFAULT NULL,
+                ip_hash   TEXT NOT NULL,
+                created   TEXT NOT NULL,
+                expires   TEXT NOT NULL,
+                deleted_at TEXT NOT NULL,
+                reason    TEXT DEFAULT 'expired'
+            )
+        """)
         conn.commit()
 
 init_db()
@@ -55,7 +67,13 @@ def auto_cleanup():
             now = datetime.utcnow().isoformat()
             with get_db() as conn:
                 cur = conn.cursor()
-                cur.execute("DELETE FROM keys WHERE expires < %s", (now,))
+                cur.execute("SELECT key, username, ip_hash, created, expires FROM keys WHERE expires < %s AND NOT expires LIKE '9999%'", (now,))
+                expired_keys = cur.fetchall()
+                for ek in expired_keys:
+                    cur.execute("""INSERT INTO key_logs (key, username, ip_hash, created, expires, deleted_at, reason)
+                        VALUES (%s,%s,%s,%s,%s,%s,'auto_cleanup')""",
+                        (ek["key"], ek["username"], ek["ip_hash"], ek["created"], ek["expires"], now))
+                cur.execute("DELETE FROM keys WHERE expires < %s AND NOT expires LIKE '9999%'", (now,))
                 c1 = cur.rowcount
                 cur.execute("DELETE FROM tokens WHERE used=1 OR created < %s",
                     ((datetime.utcnow() - timedelta(minutes=30)).isoformat(),))
@@ -192,6 +210,9 @@ def checkkey():
     if row["expires"] < now:
         with get_db() as conn:
             cur = conn.cursor()
+            cur.execute("""INSERT INTO key_logs (key, username, ip_hash, created, expires, deleted_at, reason)
+                VALUES (%s,%s,%s,%s,%s,%s,'expired')""",
+                (row["key"], row["username"], row["ip_hash"], row["created"], row["expires"], now))
             cur.execute("DELETE FROM keys WHERE key=%s", (key,))
             conn.commit()
         return jsonify({"valid": False, "reason": "expired"})
@@ -260,6 +281,12 @@ def admin_revoke():
     key = request.args.get("key", "").upper()
     with get_db() as conn:
         cur = conn.cursor()
+        cur.execute("SELECT * FROM keys WHERE key=%s", (key,))
+        row = cur.fetchone()
+        if row:
+            cur.execute("""INSERT INTO key_logs (key, username, ip_hash, created, expires, deleted_at, reason)
+                VALUES (%s,%s,%s,%s,%s,%s,'admin_revoke')""",
+                (row["key"], row["username"], row["ip_hash"], row["created"], row["expires"], datetime.utcnow().isoformat()))
         cur.execute("DELETE FROM keys WHERE key=%s", (key,))
         conn.commit()
     return jsonify({"ok": True, "deleted": key})
@@ -305,6 +332,30 @@ def admin_cleanup():
         deleted = cur.rowcount
         conn.commit()
     return jsonify({"ok": True, "deleted": deleted})
+
+# Lịch sử key đã xóa: /admin/key_logs?token=...
+@app.route("/admin/key_logs")
+def admin_key_logs():
+    if not check_admin():
+        return jsonify({"error": "unauthorized"}), 403
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM key_logs ORDER BY deleted_at DESC LIMIT 200")
+        rows = cur.fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            "key": r["key"],
+            "username": r["username"] or "chua_dung",
+            "created": r["created"][:16].replace("T", " "),
+            "expires": r["expires"][:16].replace("T", " "),
+            "deleted_at": r["deleted_at"][:16].replace("T", " "),
+            "reason": r["reason"]
+        })
+    return app.response_class(
+        response=__import__("json").dumps({"total": len(result), "logs": result}, ensure_ascii=False, indent=2),
+        mimetype="application/json"
+    )
 
 # Thống kê: /admin/stats?token=...
 @app.route("/admin/stats")
