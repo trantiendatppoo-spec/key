@@ -11,7 +11,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 # ─── DATABASE ────────────────────────────────────────────────────────────────
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 def init_db():
@@ -145,7 +145,7 @@ def secret_getkey(secret_path):
         conn.commit()
 
         cur.execute("SELECT * FROM keys WHERE ip_hash=%s ORDER BY created DESC LIMIT 1", (ip_hash,))
-        row = db_fetchone(cur)
+        row = cur.fetchone()
 
         if row:
             expires_dt = datetime.fromisoformat(row["expires"])
@@ -185,7 +185,7 @@ def checkkey():
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM keys WHERE key=%s", (key,))
-        row = db_fetchone(cur)
+        row = cur.fetchone()
 
     if not row:
         return jsonify({"valid": False, "reason": "invalid"})
@@ -221,7 +221,7 @@ def admin_keys():
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM keys ORDER BY created DESC")
-        rows = db_fetchall(cur)
+        rows = cur.fetchall()
     active = []
     expired = []
     for r in rows:
