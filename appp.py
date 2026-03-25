@@ -11,7 +11,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 # ─── DATABASE ────────────────────────────────────────────────────────────────
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
@@ -145,7 +145,7 @@ def secret_getkey(secret_path):
         conn.commit()
 
         cur.execute("SELECT * FROM keys WHERE ip_hash=%s ORDER BY created DESC LIMIT 1", (ip_hash,))
-        row = cur.fetchone()
+        row = db_fetchone(cur)
 
         if row:
             expires_dt = datetime.fromisoformat(row["expires"])
@@ -185,7 +185,7 @@ def checkkey():
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM keys WHERE key=%s", (key,))
-        row = cur.fetchone()
+        row = db_fetchone(cur)
 
     if not row:
         return jsonify({"valid": False, "reason": "invalid"})
@@ -196,17 +196,20 @@ def checkkey():
             conn.commit()
         return jsonify({"valid": False, "reason": "expired"})
 
-    # Lần đầu dùng key → lưu username vào
-    if not row["username"]:
-        if username:
-            with get_db() as conn:
-                cur = conn.cursor()
-                cur.execute("UPDATE keys SET username=%s WHERE key=%s", (username, key))
-                conn.commit()
-    else:
-        # Đã có username → check phải đúng
-        if username.lower() != row["username"].lower():
-            return jsonify({"valid": False, "reason": "wrong_user", "msg": "Key này đã được dùng bởi tài khoản khác!"})
+    # Key vĩnh viễn (expires = 9999) → không check username, dùng được nhiều acc
+    is_permanent = row["expires"].startswith("9999")
+    if not is_permanent:
+        # Lần đầu dùng key → lưu username
+        if not row["username"]:
+            if username:
+                with get_db() as conn:
+                    cur = conn.cursor()
+                    cur.execute("UPDATE keys SET username=%s WHERE key=%s", (username, key))
+                    conn.commit()
+        else:
+            # Đã có username → check phải đúng
+            if username.lower() != row["username"].lower():
+                return jsonify({"valid": False, "reason": "wrong_user", "msg": "Key này đã được dùng bởi tài khoản khác!"})
 
     return jsonify({"valid": True, "expires": row["expires"][:10]})
 
@@ -221,7 +224,7 @@ def admin_keys():
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM keys ORDER BY created DESC")
-        rows = cur.fetchall()
+        rows = db_fetchall(cur)
     active = []
     expired = []
     for r in rows:
