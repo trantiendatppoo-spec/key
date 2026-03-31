@@ -43,6 +43,21 @@ def init_db():
                 used      INTEGER DEFAULT 0
             )
         """)
+        # Add first_used column if not exists
+        try:
+            cur.execute("ALTER TABLE keys ADD COLUMN IF NOT EXISTS first_used TEXT DEFAULT NULL")
+        except:
+            pass
+        # Migrate: key chưa dùng (username NULL, chưa expired) → pending
+        try:
+            cur.execute("""
+                UPDATE keys SET expires = 'pending'
+                WHERE username IS NULL
+                AND expires != 'pending'
+                AND NOT expires LIKE '9999%'
+            """)
+        except:
+            pass
         cur.execute("""
             CREATE TABLE IF NOT EXISTS key_logs (
                 id        SERIAL PRIMARY KEY,
@@ -160,13 +175,18 @@ def secret_getkey(secret_path):
 
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM keys WHERE ip_hash=%s AND expires < %s", (ip_hash, now.isoformat()))
+        cur.execute("DELETE FROM keys WHERE ip_hash=%s AND expires < %s AND expires != 'pending'", (ip_hash, now.isoformat()))
         conn.commit()
 
         cur.execute("SELECT * FROM keys WHERE ip_hash=%s ORDER BY created DESC LIMIT 1", (ip_hash,))
         row = cur.fetchone()
 
         if row:
+            if row["expires"] == "pending":
+                return render_template_string(HTML_PAGE,
+                    key=row["key"], status="old",
+                    expires="Chưa kích hoạt", days_left=f"{KEY_EXPIRE_HOURS} giờ (khi dùng)"
+                )
             expires_dt = datetime.fromisoformat(row["expires"])
             hours_left = max(0, int((expires_dt - now).total_seconds() // 3600))
             return render_template_string(HTML_PAGE,
