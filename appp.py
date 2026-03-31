@@ -24,7 +24,8 @@ def init_db():
                 ip_hash   TEXT NOT NULL,
                 username  TEXT DEFAULT NULL,
                 created   TEXT NOT NULL,
-                expires   TEXT NOT NULL
+                expires   TEXT NOT NULL,
+                first_used TEXT DEFAULT NULL
             )
         """)
         cur.execute("""
@@ -67,13 +68,13 @@ def auto_cleanup():
             now = datetime.utcnow().isoformat()
             with get_db() as conn:
                 cur = conn.cursor()
-                cur.execute("SELECT key, username, ip_hash, created, expires FROM keys WHERE expires < %s AND NOT expires LIKE '9999%'", (now,))
+                cur.execute("SELECT key, username, ip_hash, created, expires FROM keys WHERE expires < %s AND NOT expires LIKE '9999%' AND expires != 'pending'", (now,))
                 expired_keys = cur.fetchall()
                 for ek in expired_keys:
                     cur.execute("""INSERT INTO key_logs (key, username, ip_hash, created, expires, deleted_at, reason)
                         VALUES (%s,%s,%s,%s,%s,%s,'auto_cleanup')""",
                         (ek["key"], ek["username"], ek["ip_hash"], ek["created"], ek["expires"], now))
-                cur.execute("DELETE FROM keys WHERE expires < %s AND NOT expires LIKE '9999%'", (now,))
+                cur.execute("DELETE FROM keys WHERE expires < %s AND NOT expires LIKE '9999%' AND expires != 'pending'", (now,))
                 c1 = cur.rowcount
                 cur.execute("DELETE FROM tokens WHERE used=1 OR created < %s",
                     ((datetime.utcnow() - timedelta(minutes=30)).isoformat(),))
@@ -179,16 +180,16 @@ def secret_getkey(secret_path):
             new_key = generate_key()
             cur.execute("SELECT 1 FROM keys WHERE key=%s", (new_key,))
 
-        expires_str = (now + timedelta(hours=KEY_EXPIRE_HOURS)).isoformat()
+        # expires = "pending" — chưa dùng thì chưa tính giờ
         cur.execute(
             "INSERT INTO keys (key, ip_hash, created, expires) VALUES (%s,%s,%s,%s)",
-            (new_key, ip_hash, now.isoformat(), expires_str)
+            (new_key, ip_hash, now.isoformat(), "pending")
         )
         conn.commit()
 
     return render_template_string(HTML_PAGE,
         key=new_key, status="new",
-        expires=expires_str[:16].replace("T", " "), days_left=f"{KEY_EXPIRE_HOURS} giờ"
+        expires="Chưa kích hoạt", days_left=f"{KEY_EXPIRE_HOURS} giờ (khi dùng)"
     )
 
 # API check key cho Roblox script
@@ -207,6 +208,18 @@ def checkkey():
 
     if not row:
         return jsonify({"valid": False, "reason": "invalid"})
+
+    # Key chưa dùng lần nào → kích hoạt ngay, bắt đầu tính giờ
+    if row["expires"] == "pending":
+        expires_str = (datetime.utcnow() + timedelta(hours=KEY_EXPIRE_HOURS)).isoformat()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE keys SET expires=%s, first_used=%s WHERE key=%s",
+                        (expires_str, now, key))
+            conn.commit()
+        row = dict(row)
+        row["expires"] = expires_str
+
     if row["expires"] < now:
         with get_db() as conn:
             cur = conn.cursor()
@@ -250,12 +263,13 @@ def admin_keys():
     expired = []
     for r in rows:
         is_permanent = r["expires"].startswith("9999")
-        is_expired = r["expires"] < now
+        is_pending = r["expires"] == "pending"
+        is_expired = not is_pending and not is_permanent and r["expires"] < now
         entry = {
             "key": r["key"],
             "username": r["username"] or "chua dung",
             "created": r["created"][:16].replace("T", " "),
-            "expires": "VINH VIEN" if is_permanent else r["expires"][:16].replace("T", " "),
+            "expires": "VINH VIEN" if is_permanent else ("Chua kich hoat" if is_pending else r["expires"][:16].replace("T", " ")),
         }
         if is_expired:
             expired.append(entry)
